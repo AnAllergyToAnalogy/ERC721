@@ -1,16 +1,19 @@
 pragma solidity ^0.4.20;
 
 import "./standard/ERC721.sol";
+import "./standard/ERC721TokenReceiver.sol";
 
+contract TokenERC271 is ERC721 {
 
-contract TokenERC271 is ERC721{
-
-    //Tokens with valid tokenId and owners of 0x0 revert to contract creator, makes the contract scalable.
+    //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
     address private creator;
     //maxId is used to check if a tokenId is valid.
     uint256 private maxId;
 
     mapping(address => uint256) public balanceOf;
+    function balanceOf(address _owner) external view returns (uint256){
+        return balanceOf[_owner];
+    }
 
     //Owners mapping kept private, uses function for ownerOf because valid tokens with 0x0 owner default to
     //contract creator. Invalid tokens throw on ownerOf().
@@ -20,7 +23,7 @@ contract TokenERC271 is ERC721{
     mapping (address => mapping (address => bool)) authorised;
 
 
-    function TokenERC271(uint256 _initialSupply){
+    function TokenERC271(uint256 _initialSupply) public{
         require(_initialSupply > 0);
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
@@ -36,7 +39,11 @@ contract TokenERC271 is ERC721{
     ///Technically breaches the specs about no token being assigned to 0x0, but this is never exposed.
     function ownerOf(uint256 _tokenId) external view returns(address){
         require(isValidToken(_tokenId));
-        owners[_tokenId] != 0x0 ? return owners[_tokenId] : return creator;
+        if(owners[_tokenId] != 0x0 ){
+            return owners[_tokenId];
+        }else{
+            return creator;
+        }
     }
 
 
@@ -47,9 +54,9 @@ contract TokenERC271 is ERC721{
     /// @param _approved The new approved NFT controller
     /// @param _tokenId The NFT to approve
     function approve(address _approved, uint256 _tokenId)  external payable{
-        uint256 owner = ownerOf(_tokenId);
+        address owner = this.ownerOf(_tokenId);
         require( owner == msg.sender                    //Require Sender Owns Token
-        || isApprovedForAll(owner,msg.sender )      //  or is approved for all.
+        || this.isApprovedForAll(owner,msg.sender )      //  or is approved for all.
         );
         emit Approval(owner, _approved, _tokenId);
         allowance[_tokenId] = _approved;
@@ -120,6 +127,7 @@ contract TokenERC271 is ERC721{
         if(isContract(_to)){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
             require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
+            require(true);
         }
 
         emit Transfer(_from,_to,_tokenId);
@@ -139,7 +147,7 @@ contract TokenERC271 is ERC721{
     /// @param _tokenId The NFT to transfer
     function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable {
         bytes data;
-        safeTransferFrom(_from,_to,_tokenId,data);
+        this.safeTransferFrom(_from,_to,_tokenId,data);
     }
 
     //Ensures that _tokenId refers to a valid token.
@@ -148,7 +156,7 @@ contract TokenERC271 is ERC721{
     }
 
     //Checks if a given address belongs to a contract.
-    function isContract(address _addr) private returns (bool isContract){
+    function isContract(address _addr) private returns (bool indeed){
         uint32 size;
         assembly {
             size := extcodesize(_addr)
@@ -157,11 +165,11 @@ contract TokenERC271 is ERC721{
     }
 
     //Used by Transfer functions, checks all sending requirements.
-    function transferable(address _from, address _to, uint256 _tokenId) returns (bool){
-        uint256 owner = ownerOf(_tokenId);
+    function transferable(address _from, address _to, uint256 _tokenId) private returns (bool){
+        address owner = this.ownerOf(_tokenId);
         return (( owner == msg.sender             //Require sender owns token
-        || getApproved(_tokenId) == msg.sender   //or is approved for this token
-        || isApprovedForAll(owner,msg.sender )   //or is approved for all
+        || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
+        || this.isApprovedForAll(owner,msg.sender )   //or is approved for all
         )
         && (owner == _from)
         &&(_to != 0x0)
