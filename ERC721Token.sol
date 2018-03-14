@@ -5,7 +5,7 @@ import "./standard/ERC721.sol";
 
 contract TokenERC271 is ERC721{
 
-    //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
+    //Tokens with valid tokenId and owners of 0x0 revert to contract creator, makes the contract scalable.
     address private creator;
     //maxId is used to check if a tokenId is valid.
     uint256 private maxId;
