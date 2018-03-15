@@ -1,7 +1,7 @@
 pragma solidity ^0.4.20;
 
-import "./standard/ERC721.sol";
-import "./standard/ERC721TokenReceiver.sol";
+import "./ERC7211.sol";
+import "./ERC721TokenReceiver.sol";
 
 contract TokenERC271 is ERC721 {
 
@@ -21,7 +21,6 @@ contract TokenERC271 is ERC721 {
 
     mapping (uint256 => address) public allowance;
     mapping (address => mapping (address => bool)) authorised;
-
 
     function TokenERC271(uint256 _initialSupply) public{
         require(_initialSupply > 0);
@@ -45,7 +44,6 @@ contract TokenERC271 is ERC721 {
             return creator;
         }
     }
-
 
     /// @notice Set or reaffirm the approved address for an NFT
     /// @dev The zero address indicates there is no approved address.
@@ -101,10 +99,13 @@ contract TokenERC271 is ERC721 {
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
     function transferFrom(address _from, address _to, uint256 _tokenId) external payable {
+        do_transferFrom(_from, _to, _tokenId);
+    }
+
+    //Private function with the guts of the transferFrom function, so it can be reused in the other transfer functions.
+    function do_transferFrom(address _from, address _to, uint256 _tokenId) private {
         require(transferable(_from,_to,_tokenId));
-
         emit Transfer(_from, _to, _tokenId);
-
         owners[_tokenId] = _to;
         balanceOf[_from]--;
         balanceOf[_to]++;
@@ -123,21 +124,18 @@ contract TokenERC271 is ERC721 {
     /// @param _tokenId The NFT to transfer
     /// @param data Additional data with no specified format, sent in call to `_to`
     function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) external payable {
-        require(transferable(_from,_to,_tokenId));
+        do_safeTransferFrom(_from,_to,_tokenId,data);
+    }
+    //The guts of the external safeTransferFrom function, had to make a private one to save rewriting the same thing
+    // twice for each versions of it.
+    function do_safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) private {
         if(isContract(_to)){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
             require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
             require(true);
         }
-
-        emit Transfer(_from,_to,_tokenId);
-
-        owners[_tokenId] = _to;
-        balanceOf[_from]--;
-        balanceOf[_to]++;
-
+        do_transferFrom(_from, _to, _tokenId);
     }
-
 
     /// @notice Transfers the ownership of an NFT from one address to another address
     /// @dev This works identically to the other function with an extra data parameter,
@@ -146,8 +144,7 @@ contract TokenERC271 is ERC721 {
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
     function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable {
-        bytes memory data = "";
-        this.safeTransferFrom(_from,_to,_tokenId,data);
+        do_safeTransferFrom(_from,_to,_tokenId,"");
     }
 
     //Ensures that _tokenId refers to a valid token.
