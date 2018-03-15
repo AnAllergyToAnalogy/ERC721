@@ -146,17 +146,17 @@ contract TokenERC271 is ERC721 {
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
     function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable {
-        bytes data;
+        bytes memory data = "";
         this.safeTransferFrom(_from,_to,_tokenId,data);
     }
 
     //Ensures that _tokenId refers to a valid token.
-    function isValidToken(uint256 _tokenId) private returns(bool){
+    function isValidToken(uint256 _tokenId) private view returns(bool){
         return _tokenId <= maxId;
     }
 
     //Checks if a given address belongs to a contract.
-    function isContract(address _addr) private returns (bool indeed){
+    function isContract(address _addr) private view returns (bool indeed){
         uint32 size;
         assembly {
             size := extcodesize(_addr)
@@ -165,7 +165,7 @@ contract TokenERC271 is ERC721 {
     }
 
     //Used by Transfer functions, checks all sending requirements.
-    function transferable(address _from, address _to, uint256 _tokenId) private returns (bool){
+    function transferable(address _from, address _to, uint256 _tokenId) private view returns (bool){
         address owner = this.ownerOf(_tokenId);
         return (( owner == msg.sender             //Require sender owns token
         || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
