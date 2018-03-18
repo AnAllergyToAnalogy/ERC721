@@ -1,9 +1,9 @@
 pragma solidity ^0.4.20;
 
-import "./ERC7211.sol";
-import "./ERC721TokenReceiver.sol";
+import "./standard/ERC721.sol";
+import "./standard/ERC721TokenReceiver.sol";
 
-contract TokenERC271 is ERC721 {
+contract TokenERC721 is ERC721 {
 
     //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
     address private creator;
@@ -22,7 +22,7 @@ contract TokenERC271 is ERC721 {
     mapping (uint256 => address) public allowance;
     mapping (address => mapping (address => bool)) authorised;
 
-    function TokenERC271(uint256 _initialSupply) public{
+    function TokenERC721(uint256 _initialSupply) public{
         require(_initialSupply > 0);
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
