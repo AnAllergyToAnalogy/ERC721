@@ -109,6 +109,8 @@ contract TokenERC721 is ERC721 {
         owners[_tokenId] = _to;
         balanceOf[_from]--;
         balanceOf[_to]++;
+        //Reset approved if there is one
+        allowance[_tokenId] = 0x0;
     }
 
     /// @notice Transfers the ownership of an NFT from one address to another address
