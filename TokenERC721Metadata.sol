@@ -9,9 +9,28 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
     string private _name;
     string private _symbol;
     string private _uriBase;
+    
     function tokenURI(uint256 _tokenId) external view returns (string){
-        return strConcat(_uriBase,uintToString(_tokenId));
+        uint maxlength = 100;
+        bytes memory reversed = new bytes(maxlength);
+        uint i = 0;
+        while (_tokenId != 0) {
+            uint remainder = _tokenId % 10;
+            _tokenId = _tokenId / 10;
+            reversed[i++] = byte(48 + remainder);
+        }
+        bytes memory inStrb = bytes(_uriBase);
+        bytes memory s = new bytes(inStrb.length + i);
+        uint j;
+        for (j = 0; j < inStrb.length; j++) {
+            s[j] = inStrb[j];
+        }
+        for (j = 0; j < i; j++) {
+            s[j + inStrb.length] = reversed[i - 1 - j];
+        }
+        return string(s);
     }
+    
     /// @notice A descriptive name for a collection of NFTs in this contract
     function name() external pure returns (string _name){
         return _name;
@@ -22,47 +41,18 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
         return _symbol;
     }
 
-
     function TokenERC721Metadata(uint256 _initialSupply, string name, string symbol, string uriBase) public{
+        //Same as TokenERC721
         require(_initialSupply > 0);
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
         maxId = _initialSupply - 1;
 
-        //New
+        //Specific to Metadata
         _name = name;
         _symbol = symbol;
         _uriBase = uriBase;
     }
-
-    //Private function for turning uint tokenIds into strings
-    function uintToString(uint256 v) private pure returns (string str) {
-        uint maxLength = 100;
-        bytes memory reversed = new bytes(maxLength);
-        uint i = 0;
-        while (v != 0) {
-            uint remainder = v % 10;
-            v = v / 10;
-            reversed[i++] = byte(48 + remainder);
-        }
-        bytes memory s = new bytes(i + 1);
-        for (uint j = 0; j <= i; j++) {
-            s[j] = reversed[i - j];
-        }
-        str = string(s);
-    }
-    //Private function for concatenating strings
-    function strConcat(string _a, string _b) private pure returns (string){
-        bytes memory _ba = bytes(_a);
-        bytes memory _bb = bytes(_b);
-        string memory ab = new string(_ba.length + _bb.length);
-        bytes memory bab = bytes(ab);
-        uint k = 0;
-        for (uint i = 0; i < _ba.length; i++) bab[k++] = _ba[i];
-        for (i = 0; i < _bb.length; i++) bab[k++] = _bb[i];
-        return string(bab);
-    }
-
 
    //Below is identical to ERC721 (except for constructor)
 
