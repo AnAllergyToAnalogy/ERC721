@@ -106,14 +106,13 @@ contract TokenERC721 is ERC721 {
     function do_transferFrom(address _from, address _to, uint256 _tokenId) private {
         //Check Transferable
         address owner = this.ownerOf(_tokenId);
-        return (( owner == msg.sender             //Require sender owns token
-        || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
-        || this.isApprovedForAll(owner,msg.sender )   //or is approved for all
-        )
-        && (owner == _from)
-        &&(_to != 0x0)
-        && (isValidToken(_tokenId))
+        require ( owner == msg.sender             //Require sender owns token
+            || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
+            || this.isApprovedForAll(owner,msg.sender )   //or is approved for all
         );
+        require(owner == _from);
+        require(_to != 0x0);
+        require(isValidToken(_tokenId));
         
         emit Transfer(_from, _to, _tokenId);
         owners[_tokenId] = _to;
