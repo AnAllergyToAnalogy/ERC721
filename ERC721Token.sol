@@ -104,7 +104,17 @@ contract TokenERC721 is ERC721 {
 
     //Private function with the guts of the transferFrom function, so it can be reused in the other transfer functions.
     function do_transferFrom(address _from, address _to, uint256 _tokenId) private {
-        require(transferable(_from,_to,_tokenId));
+        //Check Transferable
+        address owner = this.ownerOf(_tokenId);
+        return (( owner == msg.sender             //Require sender owns token
+        || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
+        || this.isApprovedForAll(owner,msg.sender )   //or is approved for all
+        )
+        && (owner == _from)
+        &&(_to != 0x0)
+        && (isValidToken(_tokenId))
+        );
+        
         emit Transfer(_from, _to, _tokenId);
         owners[_tokenId] = _to;
         balanceOf[_from]--;
@@ -161,18 +171,5 @@ contract TokenERC721 is ERC721 {
             size := extcodesize(_addr)
         }
         return (size > 0);
-    }
-
-    //Used by Transfer functions, checks all sending requirements.
-    function transferable(address _from, address _to, uint256 _tokenId) private view returns (bool){
-        address owner = this.ownerOf(_tokenId);
-        return (( owner == msg.sender             //Require sender owns token
-        || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
-        || this.isApprovedForAll(owner,msg.sender )   //or is approved for all
-        )
-        && (owner == _from)
-        &&(_to != 0x0)
-        && (isValidToken(_tokenId))
-        );
     }
 }
