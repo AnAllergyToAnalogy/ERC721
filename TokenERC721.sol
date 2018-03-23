@@ -120,7 +120,7 @@ contract TokenERC721 is ERC721 {
         balanceOf[_to]++;
         //Reset approved if there is one
         if(allowance[_tokenId] != 0x0){
-            allowance[_tokenId] = 0x0;
+            delete allowance[_tokenId];
         }
     }
 
