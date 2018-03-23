@@ -33,12 +33,12 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
     
     /// @notice A descriptive name for a collection of NFTs in this contract
     function name() external pure returns (string _name){
-        return _name;
+        return;
     }
 
     /// @notice An abbreviated name for NFTs in this contract
     function symbol() external pure returns (string _symbol){
-        return _symbol;
+        return;
     }
 
     function TokenERC721Metadata(uint256 _initialSupply, string name, string symbol, string uriBase) public{
@@ -164,7 +164,7 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
         balanceOf[_to]++;
         //Reset approved if there is one
         if(allowance[_tokenId] != 0x0){
-            allowance[_tokenId] = 0x0;
+            delete allowance[_tokenId];
         }
     }
 
