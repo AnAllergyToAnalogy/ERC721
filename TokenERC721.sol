@@ -23,11 +23,19 @@ contract TokenERC721 is ERC721 {
     mapping (address => mapping (address => bool)) authorised;
 
     function TokenERC721(uint256 _initialSupply) public{
-        require(_initialSupply > 0);
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
-        maxId = _initialSupply - 1;
+        maxId = _initialSupply;
     }
+    
+    //Optional function to issue more tokens
+    function issueTokens(uint256 _extraTokens) public{
+          require(msg.sender == creator);
+        //Todo: add safe math
+        balanceOf[msg.sender] += _extraTokens;
+        maxId = _initialSupply;
+    }
+    
 
     /// @notice Find the owner of an NFT
     /// @param _tokenId The identifier for an NFT
@@ -162,7 +170,7 @@ contract TokenERC721 is ERC721 {
 
     //Ensures that _tokenId refers to a valid token.
     function isValidToken(uint256 _tokenId) private view returns(bool){
-        return _tokenId <= maxId;
+        return _tokenId != 0 && _tokenId <= maxId;
     }
 
     //Checks if a given address belongs to a contract.
