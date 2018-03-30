@@ -42,8 +42,6 @@ contract TokenERC721 is ERC721 {
     /// @dev NFTs assigned to zero address are considered invalid, and queries
     ///  about them do throw.
     /// @return The address of the owner of the NFT
-
-    ///Technically breaches the specs about no token being assigned to 0x0, but this is never exposed.
     function ownerOf(uint256 _tokenId) external view returns(address){
         require(isValidToken(_tokenId));
         if(owners[_tokenId] != 0x0 ){
