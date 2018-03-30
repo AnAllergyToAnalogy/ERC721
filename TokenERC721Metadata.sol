@@ -43,10 +43,9 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
 
     function TokenERC721Metadata(uint256 _initialSupply, string name, string symbol, string uriBase) public{
         //Same as TokenERC721
-        require(_initialSupply > 0);
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
-        maxId = _initialSupply - 1;
+        maxId = _initialSupply;
 
         //Specific to Metadata
         _name = name;
@@ -55,6 +54,17 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
     }
 
    //Below is identical to ERC721 (except for constructor)
+
+    //Optional function to issue more tokens
+    function issueTokens(uint256 _extraTokens) public{
+          require(msg.sender == creator);
+        //Todo: add safe math
+        balanceOf[msg.sender] += _extraTokens;
+        maxId = _initialSupply;
+    }
+
+
+
 
     //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
     address private creator;
@@ -206,7 +216,7 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
 
     //Ensures that _tokenId refers to a valid token.
     function isValidToken(uint256 _tokenId) private view returns(bool){
-        return _tokenId <= maxId;
+        return _tokenId != 0 && _tokenId <= maxId;
     }
 
     //Checks if a given address belongs to a contract.
