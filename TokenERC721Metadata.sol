@@ -60,7 +60,7 @@ contract TokenERC721Metadata is ERC721, ERC721Metadata {
           require(msg.sender == creator);
         //Todo: add safe math
         balanceOf[msg.sender] += _extraTokens;
-        maxId = _initialSupply;
+        maxId += _extraTokens;
     }
 
 
