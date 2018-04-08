@@ -1,9 +1,8 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.21;
 
 import "./standard/ERC721.sol";
 import "./standard/ERC721TokenReceiver.sol";
 import "./libraries/SafeMath.sol";
-
 contract TokenERC721 is ERC721 {
     using SafeMath for uint256;
 
@@ -13,10 +12,11 @@ contract TokenERC721 is ERC721 {
         maxId = _initialSupply;
     }
 
+
     //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
-    address private creator;
+    address internal creator;
     //maxId is used to check if a tokenId is valid.
-    uint256 private maxId;
+    uint256 internal maxId;
 
     mapping(address => uint256) public balanceOf;
     function balanceOf(address _owner) external view returns (uint256){
@@ -25,10 +25,10 @@ contract TokenERC721 is ERC721 {
 
     //Owners mapping kept private, uses function for ownerOf because valid tokens with 0x0 owner default to
     //contract creator. Invalid tokens throw on ownerOf().
-    mapping(uint256 => address) private owners;
+    mapping(uint256 => address) internal owners;
 
-    mapping (uint256 => address) public allowance;
-    mapping (address => mapping (address => bool)) authorised;
+    mapping (uint256 => address) internal allowance;
+    mapping (address => mapping (address => bool)) internal authorised;
 
     //Optional function to issue more tokens
     function issueTokens(uint256 _extraTokens) public{
@@ -60,10 +60,11 @@ contract TokenERC721 is ERC721 {
     function approve(address _approved, uint256 _tokenId)  external payable{
         address owner = this.ownerOf(_tokenId);
         require( owner == msg.sender                    //Require Sender Owns Token
-        || this.isApprovedForAll(owner,msg.sender )      //  or is approved for all.
+            || authorised[owner][msg.sender]                //  or is approved for all.
         );
         emit Approval(owner, _approved, _tokenId);
         allowance[_tokenId] = _approved;
+
     }
 
     /// @notice Enable or disable approval for a third party ("operator") to manage
@@ -108,13 +109,18 @@ contract TokenERC721 is ERC721 {
         do_transferFrom(_from, _to, _tokenId);
     }
 
-    //Private function with the guts of the transferFrom function, so it can be reused in the other transfer functions.
-    function do_transferFrom(address _from, address _to, uint256 _tokenId) private {
+
+
+    //Internal function with the guts of the transferFrom function, so it can be reused in the other transfer functions.
+    function do_transferFrom(address _from, address _to, uint256 _tokenId) internal {
         //Check Transferable
+        //There is a token validity check in ownerOf
         address owner = this.ownerOf(_tokenId);
+
         require ( owner == msg.sender             //Require sender owns token
-        || this.getApproved(_tokenId) == msg.sender   //or is approved for this token
-        || this.isApprovedForAll(owner,msg.sender )   //or is approved for all
+            //Doing the two below manually instead of referring to the external methods saves gas
+            || allowance[_tokenId] == msg.sender      //or is approved for this token
+            || authorised[owner][msg.sender]          //or is approved for all
         );
         require(owner == _from);
         require(_to != 0x0);
@@ -147,11 +153,10 @@ contract TokenERC721 is ERC721 {
     }
     //The guts of the external safeTransferFrom function, had to make a private one to save rewriting the same thing
     // twice for each versions of it.
-    function do_safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) private {
+    function do_safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) internal {
         if(isContract(_to)){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
             require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
-            require(true);
         }
         do_transferFrom(_from, _to, _tokenId);
     }
@@ -167,12 +172,12 @@ contract TokenERC721 is ERC721 {
     }
 
     //Ensures that _tokenId refers to a valid token.
-    function isValidToken(uint256 _tokenId) private view returns(bool){
+    function isValidToken(uint256 _tokenId) internal view returns(bool){
         return _tokenId != 0 && _tokenId <= maxId;
     }
 
     //Checks if a given address belongs to a contract.
-    function isContract(address _addr) private view returns (bool indeed){
+    function isContract(address _addr) internal view returns (bool){
         uint32 size;
         assembly {
             size := extcodesize(_addr)
