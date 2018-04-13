@@ -4,10 +4,19 @@ Scaleable ERC-721 Token based on non-finalised standard found [here](https://git
 The "standard" directory contains interfaces for relevant standards.
 The "libraries" directory contains required libraries, such as "SafeMath.sol" for preventing sneaky business with overflows and such.
 
-TokenERC271.sol adheres to only the most basic of the standards, that being in ERC721.sol. It is fully scalable, but tokens have no metadata. The only parameter the constructor takes is the total number of tokens. For scalability, tokenIds start at 1, and increment by 1.
+TokenERC721.sol adheres to only the most basic of the standards, that being in ERC721.sol. It is fully scalable, but tokens have no metadata. The only parameter the constructor takes is the total number of tokens. For scalability, tokenIds start at 1, and increment by 1.
 Initially, the contract creator owns all tokens in the contract. The tokenIds don't start at 0 is because 0 is the default value of ints, which I plan to take advantage of in the future (by using the 0 val as invalid).
 There is an optional public function, only callable by the contract creator for issuing more tokens.
 
-TokenERC721Metadata.sol extends TokenERC271.sol and adheres both to the basic 721 standard, and also the ERC721Metadata.sol standard, which gives the token contract a name and symbol (as in the ERC20 standard), as well as giving each token a URI for a file which contains metadata on the token. 
+TokenERC721Metadata.sol extends TokenERC721.sol and adheres both to the basic 721 standard, and also the ERC721Metadata.sol standard, which gives the token contract a name and symbol (as in the ERC20 standard), as well as giving each token a URI for a file which contains metadata on the token. 
 
 In order to keep the contract scalable, the constructor takes a "uriBase" parameter, which is a string. When the tokenURI function is called, the contract returns a string which is the uriBase concatenated with the tokenId. This means each token's URI doesn't need to be manually defined. 
+
+TokenERC721Enumerable.sol extends TokenERC721.sol aswell, and adheres to basic 721 and also the ERC721Enumerable.sol standard, which allows token lookup via index aswell as token ID.
+
+This addition is not as scaleable. In order to satisfy the following criteria:
+1. tokens can be minted in batches, 
+2. all tokens are uniquely meaningful from the point of minting,
+3. contract creator owns tokens when they are minted
+
+it was necessary to iterate through newly minted tokens to add them to relevant index arrays. This means gas cost increases linearly with the number of tokens. However, it also means that all other operations still have a fixed cost, which was seen as more important. It is an assumption, but presumably newly minted NFTs will have a value >> the cost of minting the token. So in this regard it still scales.
