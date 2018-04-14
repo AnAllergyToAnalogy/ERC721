@@ -3,6 +3,9 @@ pragma solidity ^0.4.21;
 import "./TokenERC721.sol";
 import "./standard/ERC721Enumerable.sol";
 
+/// @title A scalable implementation of the ERC721Metadata NFT standard.
+/// @author Andrew Parker
+/// @dev Extends TokenERC721
 contract TokenERC721Enumerable is ERC721Enumerable, TokenERC721 {
     using SafeMath for uint256;
     mapping(address => uint[]) private ownerTokenIndexes;
