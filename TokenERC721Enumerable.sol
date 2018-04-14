@@ -90,7 +90,7 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
         if(oldIndex != ownerTokenIndexes[_from].length - 1){
             ownerTokenIndexes[_from][oldIndex] = ownerTokenIndexes[_from][ownerTokenIndexes[_from].length - 1];
         }
-        delete ownerTokenIndexes[_from][ownerTokenIndexes[_from].length - 1];
+        ownerTokenIndexes[_from].length--;
         tokenTokenIndexes[_tokenId] = ownerTokenIndexes[_to].length;
         ownerTokenIndexes[_to].push(_tokenId);
     }
