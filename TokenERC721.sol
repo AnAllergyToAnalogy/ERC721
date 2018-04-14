@@ -1,18 +1,22 @@
 pragma solidity ^0.4.21;
 
+import "./CheckERC165.sol";
 import "./standard/ERC721.sol";
 import "./standard/ERC721TokenReceiver.sol";
-import "./CheckERC165.sol";
 import "./libraries/SafeMath.sol";
 
-contract TokenERC721 is ERC721, CheckERC165  {
+/// @title A scalable implementation of the ERC721 NFT standard
+/// @author Andrew Parker
+contract TokenERC721 is ERC721, CheckERC165 {
     using SafeMath for uint256;
 
+    /// @notice Contract constructor
+    /// @param _initialSupply The number of tokens to mint initially
     function TokenERC721(uint _initialSupply) public CheckERC165(){
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
         maxId = _initialSupply;
-        
+
         //Add to ERC165 Interface Check
         supportedInterfaces[
             this.balanceOf.selector ^
@@ -30,24 +34,32 @@ contract TokenERC721 is ERC721, CheckERC165  {
     }
 
 
-    //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
-    address internal creator;
-    //maxId is used to check if a tokenId is valid.
-    uint256 internal maxId;
 
-    mapping(address => uint256) public balanceOf;
+
+    /// @notice Count all NFTs assigned to an owner
+    /// @dev NFTs assigned to the zero address are considered invalid, and this
+    ///  function throws for queries about the zero address.
+    /// @param _owner An address for whom to query the balance
+    /// @return The number of NFTs owned by `_owner`, possibly zero
     function balanceOf(address _owner) external view returns (uint256){
         return balanceOf[_owner];
     }
 
-    //Owners mapping kept private, uses function for ownerOf because valid tokens with 0x0 owner default to
-    //contract creator. Invalid tokens throw on ownerOf().
+    //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
+    address internal creator;
+    //maxId is used to check if a tokenId is valid.
+    uint256 internal maxId;
+    mapping(address => uint256) internal balanceOf;
     mapping(uint256 => address) internal owners;
-
     mapping (uint256 => address) internal allowance;
     mapping (address => mapping (address => bool)) internal authorised;
 
-    //Optional function to issue more tokens
+    /// @notice Mints more tokens, can only be called by contract creator and
+    /// all newly minted tokens will belong to creator.
+    /// @dev This function is optional, it isn't required by the ERC721 spec,
+    /// and is not needed if the initial supply of NFTs is all that is needed.
+    /// @dev Throws if msg.sender isn't creator, or if added tokens overflows maxId (uint256)
+    /// @param _extraTokens The number of extra tokens to mint.
     function issueTokens(uint256 _extraTokens) public{
         require(msg.sender == creator);
         balanceOf[msg.sender] = balanceOf[msg.sender].add(_extraTokens);
@@ -128,7 +140,11 @@ contract TokenERC721 is ERC721, CheckERC165  {
 
 
 
-    //Internal function with the guts of the transferFrom function, so it can be reused in the other transfer functions.
+    /// @notice Internal function that actually transfers tokens.
+    /// @dev Complies with transferFrom's restrictions
+    /// @param _from The current owner of the NFT
+    /// @param _to The new owner
+    /// @param _tokenId The NFT to transfer
     function do_transferFrom(address _from, address _to, uint256 _tokenId) internal {
         //Check Transferable
         //There is a token validity check in ownerOf
@@ -142,7 +158,6 @@ contract TokenERC721 is ERC721, CheckERC165  {
         require(owner == _from);
         require(_to != 0x0);
         require(isValidToken(_tokenId));
-
         emit Transfer(_from, _to, _tokenId);
         owners[_tokenId] = _to;
         balanceOf[_from]--;
@@ -168,8 +183,14 @@ contract TokenERC721 is ERC721, CheckERC165  {
     function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) external payable {
         do_safeTransferFrom(_from,_to,_tokenId,data);
     }
-    //The guts of the external safeTransferFrom function, had to make a private one to save rewriting the same thing
-    // twice for each versions of it.
+
+
+    /// @notice Internal function that does the safeTransferFrom checks, then transfers tokens.
+    /// @dev Complies with safeTransferFrom's restrictions.
+    /// @param _from The current owner of the NFT
+    /// @param _to The new owner
+    /// @param _tokenId The NFT to transfer
+    /// @param data Additional data with no specified format, sent in call to `_to`
     function do_safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) internal {
         if(isContract(_to)){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
@@ -188,12 +209,17 @@ contract TokenERC721 is ERC721, CheckERC165  {
         do_safeTransferFrom(_from,_to,_tokenId,"");
     }
 
-    //Ensures that _tokenId refers to a valid token.
+    /// @notice Checks if a given tokenId is valid
+    /// @dev If adding the ability to burn tokens, this function will need to reflect that.
+    /// @param _tokenId The tokenId to check
+    /// @return (bool) True if valid, False if not valid.
     function isValidToken(uint256 _tokenId) internal view returns(bool){
         return _tokenId != 0 && _tokenId <= maxId;
     }
 
-    //Checks if a given address belongs to a contract.
+    /// @notice Checks if a given address belongs to a contract.
+    /// @param _addr The address to check.
+    /// @return (bool) True if contract, False otherwise.
     function isContract(address _addr) internal view returns (bool){
         uint32 size;
         assembly {
