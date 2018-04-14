@@ -8,6 +8,13 @@ contract TokenERC721Metadata is TokenERC721 {
         _name = name;
         _symbol = symbol;
         _uriBase = uriBase;
+        
+        //Add to ERC165 Interface Check
+        supportedInterfaces[
+            this.name.selector ^
+            this.symbol.selector ^
+            this.tokenURI.selector
+        ] = true;
     }
 
     string private _name;
