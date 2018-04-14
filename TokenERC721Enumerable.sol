@@ -74,15 +74,16 @@ contract TokenERC721Enumerable is ERC721Enumerable, TokenERC721 {
     }
 
     function TokenERC721Enumerable(uint _initialSupply) public TokenERC721(_initialSupply){
-        //Old
-        creator = msg.sender;
-        balanceOf[msg.sender] = _initialSupply;
-        maxId = _initialSupply;
-
-        //New
         for(uint i = 0; i < _initialSupply; i++){
             tokenTokenIndexes[i+1] = i;
             ownerTokenIndexes[creator].push(i+1);
         }
+        
+       //Add to ERC165 Interface Check
+        supportedInterfaces[
+            this.totalSupply.selector ^
+            this.tokenByIndex.selector ^
+            this.tokenOfOwnerByIndex.selector
+        ] = true;
     }
 }
