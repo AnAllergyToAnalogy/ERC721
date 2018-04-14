@@ -3,6 +3,9 @@ pragma solidity ^0.4.21;
 import "./TokenERC721.sol";
 import "./standard/ERC721Metadata.sol";
 
+/// @title A scalable implementation of the ERC721Metadata NFT standard.
+/// @author Andrew Parker
+/// @dev Extends TokenERC721
 contract TokenERC721Metadata is TokenERC721, ERC721Metadata {
 
     /// @notice Contract constructor
