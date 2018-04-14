@@ -2,14 +2,31 @@ pragma solidity ^0.4.21;
 
 import "./standard/ERC721.sol";
 import "./standard/ERC721TokenReceiver.sol";
+import "./CheckERC165.sol";
 import "./libraries/SafeMath.sol";
-contract TokenERC721 is ERC721 {
+
+contract TokenERC721 is ERC721, CheckERC165  {
     using SafeMath for uint256;
 
-    function TokenERC721(uint _initialSupply) public {
+    function TokenERC721(uint _initialSupply) public CheckERC165(){
         creator = msg.sender;
         balanceOf[msg.sender] = _initialSupply;
         maxId = _initialSupply;
+        
+        //Add to ERC165 Interface Check
+        supportedInterfaces[
+            this.balanceOf.selector ^
+            this.ownerOf.selector ^
+            //this.safeTransferFrom.selector ^
+            //Have to manually do the two transferFroms because overloading confuse selector
+                bytes4(keccak256("safeTransferFrom(address,address,uint256"))^
+                bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes"))^
+            this.transferFrom.selector ^
+            this.approve.selector ^
+            this.setApprovalForAll.selector ^
+            this.getApproved.selector ^
+            this.isApprovedForAll.selector
+        ] = true;
     }
 
 
