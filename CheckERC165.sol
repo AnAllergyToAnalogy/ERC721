@@ -1,10 +1,10 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.22;
 
 import "./standard/ERC165.sol";
 
 contract CheckERC165 is ERC165 {
 
-    function CheckERC165() public {
+    function constructor() public {
         supportedInterfaces[this.supportedInterfaces.selector] = true;
     }
 
