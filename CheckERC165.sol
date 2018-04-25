@@ -4,7 +4,7 @@ import "./standard/ERC165.sol";
 
 contract CheckERC165 is ERC165 {
 
-    function constructor() public {
+    constructor() public {
         supportedInterfaces[this.supportedInterfaces.selector] = true;
     }
 
