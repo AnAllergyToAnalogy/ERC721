@@ -1,4 +1,5 @@
 pragma solidity ^0.4.20;
+//Mutability and Visibility of some functions has been altered.
 
 /// @title ERC-721 Non-Fungible Token Standard
 /// @dev See https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md
@@ -47,7 +48,10 @@ interface ERC721 /* is ERC165 */ {
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
     /// @param data Additional data with no specified format, sent in call to `_to`
-    function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) external payable;
+
+    // Changed mutability to implicit non-payable
+    // Changed visibility to public
+    function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) public;
 
     /// @notice Transfers the ownership of an NFT from one address to another address
     /// @dev This works identically to the other function with an extra data parameter,
@@ -55,7 +59,9 @@ interface ERC721 /* is ERC165 */ {
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable;
+
+    // Changed mutability to implicit non-payable
+    function safeTransferFrom(address _from, address _to, uint256 _tokenId) external;
 
     /// @notice Transfer ownership of an NFT -- THE CALLER IS RESPONSIBLE
     ///  TO CONFIRM THAT `_to` IS CAPABLE OF RECEIVING NFTS OR ELSE
@@ -67,7 +73,10 @@ interface ERC721 /* is ERC165 */ {
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function transferFrom(address _from, address _to, uint256 _tokenId) external payable;
+
+    // Changed mutability to implicit non-payable
+    // Changed visibility to public
+    function transferFrom(address _from, address _to, uint256 _tokenId) public;
 
     /// @notice Set or reaffirm the approved address for an NFT
     /// @dev The zero address indicates there is no approved address.
@@ -75,7 +84,9 @@ interface ERC721 /* is ERC165 */ {
     ///  operator of the current owner.
     /// @param _approved The new approved NFT controller
     /// @param _tokenId The NFT to approve
-    function approve(address _approved, uint256 _tokenId) external payable;
+
+    // Changed mutability to implicit non-payable
+    function approve(address _approved, uint256 _tokenId) external;
 
     /// @notice Enable or disable approval for a third party ("operator") to manage
     ///  all your assets.
