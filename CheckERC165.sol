@@ -3,12 +3,11 @@ pragma solidity ^0.4.22;
 import "./standard/ERC165.sol";
 
 contract CheckERC165 is ERC165 {
+    mapping (bytes4 => bool) internal supportedInterfaces;
 
     constructor() public {
         supportedInterfaces[this.supportedInterfaces.selector] = true;
     }
-
-    mapping (bytes4 => bool) internal supportedInterfaces;
     
     /// @notice Query if a contract implements an interface
     /// @param interfaceID The interface identifier, as specified in ERC-165
