@@ -6,7 +6,7 @@ contract CheckERC165 is ERC165 {
     mapping (bytes4 => bool) internal supportedInterfaces;
 
     constructor() public {
-        supportedInterfaces[this.supportedInterfaces.selector] = true;
+        supportedInterfaces[this.supportsInterface.selector] = true;
     }
     
     /// @notice Query if a contract implements an interface
