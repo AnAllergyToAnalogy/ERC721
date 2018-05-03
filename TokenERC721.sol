@@ -68,13 +68,36 @@ contract TokenERC721 is ERC721, CheckERC165{
     /// @dev NFTs assigned to zero address are considered invalid, and queries
     ///  about them do throw.
     /// @return The address of the owner of the NFT
-    function ownerOf(uint256 _tokenId) external view returns(address){
+    function ownerOf(uint256 _tokenId) public view returns(address){
         require(isValidToken(_tokenId));
         if(owners[_tokenId] != 0x0 ){
             return owners[_tokenId];
         }else{
             return creator;
         }
+    }
+
+    /// @notice Mints more tokens, can only be called by contract creator and
+    /// all newly minted tokens will belong to creator.
+    /// @dev This function is optional, it isn't required by the ERC721 spec,
+    /// and is not needed if the initial supply of NFTs is all that is needed.
+    /// @dev Throws if msg.sender isn't creator, or if added tokens overflows maxId (uint256)
+    /// @param _extraTokens The number of extra tokens to mint.
+    function issueTokens(uint256 _extraTokens) public{
+        require(msg.sender == creator);
+        balances[msg.sender] = balances[msg.sender].add(_extraTokens);
+        maxId = maxId.add(_extraTokens);
+    }
+
+    function burnToken(uint256 _tokenId) external{
+        address owner = ownerOf(_tokenId);
+        require ( owner == msg.sender             //Require sender owns token
+            //Doing the two below manually instead of referring to the external methods saves gas
+            || allowance[_tokenId] == msg.sender      //or is approved for this token
+            || authorised[owner][msg.sender]          //or is approved for all
+        );
+        burned[_tokenId] = true;
+        balances[owner]--;
     }
 
 
@@ -96,32 +119,6 @@ contract TokenERC721 is ERC721, CheckERC165{
     }
 
 
-
-    /// @notice Mints more tokens, can only be called by contract creator and
-    /// all newly minted tokens will belong to creator.
-    /// @dev This function is optional, it isn't required by the ERC721 spec,
-    /// and is not needed if the initial supply of NFTs is all that is needed.
-    /// @dev Throws if msg.sender isn't creator, or if added tokens overflows maxId (uint256)
-    /// @param _extraTokens The number of extra tokens to mint.
-    function issueTokens(uint256 _extraTokens) public{
-        require(msg.sender == creator);
-        balances[msg.sender] = balances[msg.sender].add(_extraTokens);
-        maxId = maxId.add(_extraTokens);
-    }
-
-    function burnToken(uint256 _tokenId) external{
-        address owner = this.ownerOf(_tokenId);
-        require ( owner == msg.sender             //Require sender owns token
-            //Doing the two below manually instead of referring to the external methods saves gas
-            || allowance[_tokenId] == msg.sender      //or is approved for this token
-            || authorised[owner][msg.sender]          //or is approved for all
-        );
-        burned[_tokenId] = true;
-        balances[owner]--;
-    }
-
-
-
     /// @notice Set or reaffirm the approved address for an NFT
     /// @dev The zero address indicates there is no approved address.
     /// @dev Throws unless `msg.sender` is the current NFT owner, or an authorized
@@ -129,7 +126,7 @@ contract TokenERC721 is ERC721, CheckERC165{
     /// @param _approved The new approved NFT controller
     /// @param _tokenId The NFT to approve
     function approve(address _approved, uint256 _tokenId)  external{
-        address owner = this.ownerOf(_tokenId);
+        address owner = ownerOf(_tokenId);
         require( owner == msg.sender                    //Require Sender Owns Token
         || authorised[owner][msg.sender]                //  or is approved for all.
         );
@@ -163,7 +160,7 @@ contract TokenERC721 is ERC721, CheckERC165{
     function transferFrom(address _from, address _to, uint256 _tokenId) public {
         //Check Transferable
         //There is a token validity check in ownerOf
-        address owner = this.ownerOf(_tokenId);
+        address owner = ownerOf(_tokenId);
 
         require ( owner == msg.sender             //Require sender owns token
             //Doing the two below manually instead of referring to the external methods saves gas
@@ -219,4 +216,6 @@ contract TokenERC721 is ERC721, CheckERC165{
     function safeTransferFrom(address _from, address _to, uint256 _tokenId) external {
         safeTransferFrom(_from,_to,_tokenId,"");
     }
+
+
 }
