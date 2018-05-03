@@ -2,6 +2,7 @@
 Scaleable ERC-721 Token based on non-finalised standard found [here](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-721.md). 
 
 The "standard" directory contains interfaces for relevant standards.
+The mutability and visibility of some functions in the interface files have been modified. This is done in accordance with the standard, and does not affect the function signatures, nor the interfaceIDs.
 The "libraries" directory contains required libraries, such as "SafeMath.sol" for preventing sneaky business with overflows and such.
 
 TokenERC721.sol adheres to only the most basic of the standards, that being in ERC721.sol. It is fully scalable, but tokens have no metadata. The only parameter the constructor takes is the total number of tokens. For scalability, tokenIds start at 1, and increment by 1.
