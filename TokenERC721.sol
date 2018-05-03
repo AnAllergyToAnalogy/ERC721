@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.22;
 
 import "./CheckERC165.sol";
 import "./standard/ERC721.sol";
@@ -7,14 +7,24 @@ import "./libraries/SafeMath.sol";
 
 /// @title A scalable implementation of the ERC721 NFT standard
 /// @author Andrew Parker
-contract TokenERC721 is ERC721, CheckERC165 {
+contract TokenERC721 is ERC721, CheckERC165{
     using SafeMath for uint256;
+
+    //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
+    address internal creator;
+    //maxId is used to check if a tokenId is valid.
+    uint256 internal maxId;
+    mapping(address => uint256) internal balances;
+    mapping(uint256 => address) internal owners;
+    mapping (uint256 => address) internal allowance;
+    mapping (address => mapping (address => bool)) internal authorised;
+
 
     /// @notice Contract constructor
     /// @param _initialSupply The number of tokens to mint initially
-    function TokenERC721(uint _initialSupply) public CheckERC165(){
+    constructor(uint _initialSupply) public CheckERC165(){
         creator = msg.sender;
-        balanceOf[msg.sender] = _initialSupply;
+        balances[msg.sender] = _initialSupply;
         maxId = _initialSupply;
 
         //Add to ERC165 Interface Check
@@ -23,8 +33,8 @@ contract TokenERC721 is ERC721, CheckERC165 {
             this.ownerOf.selector ^
             //this.safeTransferFrom.selector ^
             //Have to manually do the two transferFroms because overloading confuse selector
-                bytes4(keccak256("safeTransferFrom(address,address,uint256"))^
-                bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes"))^
+            bytes4(keccak256("safeTransferFrom(address,address,uint256"))^
+            bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes"))^
             this.transferFrom.selector ^
             this.approve.selector ^
             this.setApprovalForAll.selector ^
@@ -32,27 +42,14 @@ contract TokenERC721 is ERC721, CheckERC165 {
             this.isApprovedForAll.selector
         ] = true;
     }
-
-
-
-
     /// @notice Count all NFTs assigned to an owner
     /// @dev NFTs assigned to the zero address are considered invalid, and this
     ///  function throws for queries about the zero address.
     /// @param _owner An address for whom to query the balance
     /// @return The number of NFTs owned by `_owner`, possibly zero
     function balanceOf(address _owner) external view returns (uint256){
-        return balanceOf[_owner];
+        return balances[_owner];
     }
-
-    //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
-    address internal creator;
-    //maxId is used to check if a tokenId is valid.
-    uint256 internal maxId;
-    mapping(address => uint256) internal balanceOf;
-    mapping(uint256 => address) internal owners;
-    mapping (uint256 => address) internal allowance;
-    mapping (address => mapping (address => bool)) internal authorised;
 
     /// @notice Mints more tokens, can only be called by contract creator and
     /// all newly minted tokens will belong to creator.
@@ -62,7 +59,7 @@ contract TokenERC721 is ERC721, CheckERC165 {
     /// @param _extraTokens The number of extra tokens to mint.
     function issueTokens(uint256 _extraTokens) public{
         require(msg.sender == creator);
-        balanceOf[msg.sender] = balanceOf[msg.sender].add(_extraTokens);
+        balances[msg.sender] = balances[msg.sender].add(_extraTokens);
         maxId = maxId.add(_extraTokens);
     }
 
@@ -86,10 +83,10 @@ contract TokenERC721 is ERC721, CheckERC165 {
     ///  operator of the current owner.
     /// @param _approved The new approved NFT controller
     /// @param _tokenId The NFT to approve
-    function approve(address _approved, uint256 _tokenId)  external payable{
+    function approve(address _approved, uint256 _tokenId)  external{
         address owner = this.ownerOf(_tokenId);
         require( owner == msg.sender                    //Require Sender Owns Token
-            || authorised[owner][msg.sender]                //  or is approved for all.
+        || authorised[owner][msg.sender]                //  or is approved for all.
         );
         emit Approval(owner, _approved, _tokenId);
         allowance[_tokenId] = _approved;
@@ -134,18 +131,7 @@ contract TokenERC721 is ERC721, CheckERC165 {
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function transferFrom(address _from, address _to, uint256 _tokenId) external payable {
-        do_transferFrom(_from, _to, _tokenId);
-    }
-
-
-
-    /// @notice Internal function that actually transfers tokens.
-    /// @dev Complies with transferFrom's restrictions
-    /// @param _from The current owner of the NFT
-    /// @param _to The new owner
-    /// @param _tokenId The NFT to transfer
-    function do_transferFrom(address _from, address _to, uint256 _tokenId) internal {
+    function transferFrom(address _from, address _to, uint256 _tokenId) public {
         //Check Transferable
         //There is a token validity check in ownerOf
         address owner = this.ownerOf(_tokenId);
@@ -158,10 +144,12 @@ contract TokenERC721 is ERC721, CheckERC165 {
         require(owner == _from);
         require(_to != 0x0);
         require(isValidToken(_tokenId));
+
         emit Transfer(_from, _to, _tokenId);
+
         owners[_tokenId] = _to;
-        balanceOf[_from]--;
-        balanceOf[_to]++;
+        balances[_from]--;
+        balances[_to]++;
         //Reset approved if there is one
         if(allowance[_tokenId] != 0x0){
             delete allowance[_tokenId];
@@ -180,23 +168,12 @@ contract TokenERC721 is ERC721, CheckERC165 {
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
     /// @param data Additional data with no specified format, sent in call to `_to`
-    function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) external payable {
-        do_safeTransferFrom(_from,_to,_tokenId,data);
-    }
-
-
-    /// @notice Internal function that does the safeTransferFrom checks, then transfers tokens.
-    /// @dev Complies with safeTransferFrom's restrictions.
-    /// @param _from The current owner of the NFT
-    /// @param _to The new owner
-    /// @param _tokenId The NFT to transfer
-    /// @param data Additional data with no specified format, sent in call to `_to`
-    function do_safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) internal {
+    function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) public {
         if(isContract(_to)){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
             require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
         }
-        do_transferFrom(_from, _to, _tokenId);
+        transferFrom(_from, _to, _tokenId);
     }
 
     /// @notice Transfers the ownership of an NFT from one address to another address
@@ -205,8 +182,8 @@ contract TokenERC721 is ERC721, CheckERC165 {
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function safeTransferFrom(address _from, address _to, uint256 _tokenId) external payable {
-        do_safeTransferFrom(_from,_to,_tokenId,"");
+    function safeTransferFrom(address _from, address _to, uint256 _tokenId) external {
+        safeTransferFrom(_from,_to,_tokenId,"");
     }
 
     /// @notice Checks if a given tokenId is valid
