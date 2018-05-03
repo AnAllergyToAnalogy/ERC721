@@ -10,11 +10,13 @@ import "./libraries/SafeMath.sol";
 contract TokenERC721 is ERC721, CheckERC165{
     using SafeMath for uint256;
 
+
     //Tokens with owners of 0x0 revert to contract creator, makes the contract scalable.
     address internal creator;
     //maxId is used to check if a tokenId is valid.
     uint256 internal maxId;
     mapping(address => uint256) internal balances;
+    mapping(uint256 => bool) internal burned;
     mapping(uint256 => address) internal owners;
     mapping (uint256 => address) internal allowance;
     mapping (address => mapping (address => bool)) internal authorised;
@@ -42,6 +44,16 @@ contract TokenERC721 is ERC721, CheckERC165{
             this.isApprovedForAll.selector
         ] = true;
     }
+
+    /// @notice Checks if a given tokenId is valid
+    /// @dev If adding the ability to burn tokens, this function will need to reflect that.
+    /// @param _tokenId The tokenId to check
+    /// @return (bool) True if valid, False if not valid.
+    function isValidToken(uint256 _tokenId) internal view returns(bool){
+        return _tokenId != 0 && _tokenId <= maxId && !burned[_tokenId];
+    }
+
+
     /// @notice Count all NFTs assigned to an owner
     /// @dev NFTs assigned to the zero address are considered invalid, and this
     ///  function throws for queries about the zero address.
@@ -49,18 +61,6 @@ contract TokenERC721 is ERC721, CheckERC165{
     /// @return The number of NFTs owned by `_owner`, possibly zero
     function balanceOf(address _owner) external view returns (uint256){
         return balances[_owner];
-    }
-
-    /// @notice Mints more tokens, can only be called by contract creator and
-    /// all newly minted tokens will belong to creator.
-    /// @dev This function is optional, it isn't required by the ERC721 spec,
-    /// and is not needed if the initial supply of NFTs is all that is needed.
-    /// @dev Throws if msg.sender isn't creator, or if added tokens overflows maxId (uint256)
-    /// @param _extraTokens The number of extra tokens to mint.
-    function issueTokens(uint256 _extraTokens) public{
-        require(msg.sender == creator);
-        balances[msg.sender] = balances[msg.sender].add(_extraTokens);
-        maxId = maxId.add(_extraTokens);
     }
 
     /// @notice Find the owner of an NFT
@@ -76,6 +76,51 @@ contract TokenERC721 is ERC721, CheckERC165{
             return creator;
         }
     }
+
+
+    /// @notice Get the approved address for a single NFT
+    /// @dev Throws if `_tokenId` is not a valid NFT
+    /// @param _tokenId The NFT to find the approved address for
+    /// @return The approved address for this NFT, or the zero address if there is none
+    function getApproved(uint256 _tokenId) external view returns (address) {
+        require(isValidToken(_tokenId));
+        return allowance[_tokenId];
+    }
+
+    /// @notice Query if an address is an authorized operator for another address
+    /// @param _owner The address that owns the NFTs
+    /// @param _operator The address that acts on behalf of the owner
+    /// @return True if `_operator` is an approved operator for `_owner`, false otherwise
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool) {
+        return authorised[_owner][_operator];
+    }
+
+
+
+    /// @notice Mints more tokens, can only be called by contract creator and
+    /// all newly minted tokens will belong to creator.
+    /// @dev This function is optional, it isn't required by the ERC721 spec,
+    /// and is not needed if the initial supply of NFTs is all that is needed.
+    /// @dev Throws if msg.sender isn't creator, or if added tokens overflows maxId (uint256)
+    /// @param _extraTokens The number of extra tokens to mint.
+    function issueTokens(uint256 _extraTokens) public{
+        require(msg.sender == creator);
+        balances[msg.sender] = balances[msg.sender].add(_extraTokens);
+        maxId = maxId.add(_extraTokens);
+    }
+
+    function burnToken(uint256 _tokenId) external{
+        address owner = this.ownerOf(_tokenId);
+        require ( owner == msg.sender             //Require sender owns token
+            //Doing the two below manually instead of referring to the external methods saves gas
+            || allowance[_tokenId] == msg.sender      //or is approved for this token
+            || authorised[owner][msg.sender]          //or is approved for all
+        );
+        burned[_tokenId] = true;
+        balances[owner]--;
+    }
+
+
 
     /// @notice Set or reaffirm the approved address for an NFT
     /// @dev The zero address indicates there is no approved address.
@@ -104,22 +149,6 @@ contract TokenERC721 is ERC721, CheckERC165{
         authorised[msg.sender][_operator] = _approved;
     }
 
-    /// @notice Get the approved address for a single NFT
-    /// @dev Throws if `_tokenId` is not a valid NFT
-    /// @param _tokenId The NFT to find the approved address for
-    /// @return The approved address for this NFT, or the zero address if there is none
-    function getApproved(uint256 _tokenId) external view returns (address) {
-        require(isValidToken(_tokenId));
-        return allowance[_tokenId];
-    }
-
-    /// @notice Query if an address is an authorized operator for another address
-    /// @param _owner The address that owns the NFTs
-    /// @param _operator The address that acts on behalf of the owner
-    /// @return True if `_operator` is an approved operator for `_owner`, false otherwise
-    function isApprovedForAll(address _owner, address _operator) external view returns (bool) {
-        return authorised[_owner][_operator];
-    }
 
     /// @notice Transfer ownership of an NFT -- THE CALLER IS RESPONSIBLE
     ///  TO CONFIRM THAT `_to` IS CAPABLE OF RECEIVING NFTS OR ELSE
@@ -169,7 +198,12 @@ contract TokenERC721 is ERC721, CheckERC165{
     /// @param _tokenId The NFT to transfer
     /// @param data Additional data with no specified format, sent in call to `_to`
     function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) public {
-        if(isContract(_to)){
+        //Get size of "_to" address, if 0 it's a wallet
+        uint32 size;
+        assembly {
+            size := extcodesize(_to)
+        }
+        if(size > 0){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
             require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
         }
@@ -184,24 +218,5 @@ contract TokenERC721 is ERC721, CheckERC165{
     /// @param _tokenId The NFT to transfer
     function safeTransferFrom(address _from, address _to, uint256 _tokenId) external {
         safeTransferFrom(_from,_to,_tokenId,"");
-    }
-
-    /// @notice Checks if a given tokenId is valid
-    /// @dev If adding the ability to burn tokens, this function will need to reflect that.
-    /// @param _tokenId The tokenId to check
-    /// @return (bool) True if valid, False if not valid.
-    function isValidToken(uint256 _tokenId) internal view returns(bool){
-        return _tokenId != 0 && _tokenId <= maxId;
-    }
-
-    /// @notice Checks if a given address belongs to a contract.
-    /// @param _addr The address to check.
-    /// @return (bool) True if contract, False otherwise.
-    function isContract(address _addr) internal view returns (bool){
-        uint32 size;
-        assembly {
-            size := extcodesize(_addr)
-        }
-        return (size > 0);
     }
 }
