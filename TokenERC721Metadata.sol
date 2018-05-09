@@ -13,11 +13,7 @@ contract TokenERC721Metadata is TokenERC721, ERC721Metadata {
     /// @param name The name of the NFT
     /// @param symbol The symbol for the NFT
     /// @param uriBase The base for the tokens' URI. Assumes metadata will be in the form "something/tokenId"
-    constructor(uint _initialSupply, string name, string symbol, string uriBase) public TokenERC721(_initialSupply){
-        _name = name;
-        _symbol = symbol;
-        _uriBase = bytes(uriBase);
-
+    constructor(uint _initialSupply) public TokenERC721(_initialSupply){
         //Add to ERC165 Interface Check
         supportedInterfaces[
             this.name.selector ^
@@ -26,9 +22,7 @@ contract TokenERC721Metadata is TokenERC721, ERC721Metadata {
         ] = true;
     }
 
-    string private _name;
-    string private _symbol;
-    bytes private _uriBase;
+    bytes private _uriBase = bytes("Might as well hard code the URI base too");
 
     /// @notice A distinct Uniform Resource Identifier (URI) for a given asset.
     /// @dev Throws if `_tokenId` is not a valid NFT. URIs are defined in RFC
@@ -58,11 +52,12 @@ contract TokenERC721Metadata is TokenERC721, ERC721Metadata {
     }
 
     /// @notice A descriptive name for a collection of NFTs in this contract
-    function name() external view returns (string _name){
-        return _name;
+    function name() external pure returns (string _name){
+        _name = "Name must be hard coded";
     }
 
     /// @notice An abbreviated name for NFTs in this contract
-    function symbol() external view returns (string _symbol){
-        return _symbol;
+    function symbol() external pure returns (string _symbol){
+        _symbol = "Symbol must be hard coded";
     }
+}
