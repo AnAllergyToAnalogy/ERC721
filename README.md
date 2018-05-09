@@ -13,6 +13,8 @@ TokenERC721Metadata.sol extends TokenERC721.sol and adheres both to the basic 72
 
 In order to keep the contract scalable, the constructor takes a "uriBase" parameter, which is a string. When the tokenURI function is called, the contract returns a string which is the uriBase concatenated with the tokenId. This means each token's URI doesn't need to be manually defined. 
 
+I also changed the mutability of the `name()` and `symbol()` functions from `pure` to `view`. This technically breaches the mutability guarantee rules, but I think the standard is wrong for having them as `pure`, because it means you have to hard code the values into the contract functions. I put in a pull request and hopefully the standard will be updated to match this.
+
 TokenERC721Enumerable.sol extends TokenERC721.sol aswell, and adheres to basic 721 and also the ERC721Enumerable.sol standard, which allows token lookup via index aswell as token ID.
 
 This addition is not as scaleable. In order to satisfy the following criteria:
