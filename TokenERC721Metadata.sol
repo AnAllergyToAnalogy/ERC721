@@ -10,9 +10,6 @@ contract TokenERC721Metadata is TokenERC721, ERC721Metadata {
 
     /// @notice Contract constructor
     /// @param _initialSupply The number of tokens to mint initially (see TokenERC721)
-    /// @param name The name of the NFT
-    /// @param symbol The symbol for the NFT
-    /// @param uriBase The base for the tokens' URI. Assumes metadata will be in the form "something/tokenId"
     constructor(uint _initialSupply) public TokenERC721(_initialSupply){
         //Add to ERC165 Interface Check
         supportedInterfaces[
@@ -22,7 +19,8 @@ contract TokenERC721Metadata is TokenERC721, ERC721Metadata {
         ] = true;
     }
 
-    bytes private _uriBase = bytes("Might as well hard code the URI base too");
+    string private _uriBase_string = "Might as well hard code the URI base too";
+    bytes private _uriBase = bytes(_uriBase_string);
 
     /// @notice A distinct Uniform Resource Identifier (URI) for a given asset.
     /// @dev Throws if `_tokenId` is not a valid NFT. URIs are defined in RFC
