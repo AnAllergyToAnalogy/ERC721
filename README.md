@@ -11,9 +11,9 @@ There is an optional public function, only callable by the contract creator for 
 
 TokenERC721Metadata.sol extends TokenERC721.sol and adheres both to the basic 721 standard, and also the ERC721Metadata.sol standard, which gives the token contract a name and symbol (as in the ERC20 standard), as well as giving each token a URI for a file which contains metadata on the token. 
 
-In order to keep the contract scalable, the constructor takes a "uriBase" parameter, which is a string. When the tokenURI function is called, the contract returns a string which is the uriBase concatenated with the tokenId. This means each token's URI doesn't need to be manually defined. 
+In order to keep the contract scalable, the metadata contract has a "uriBase" parameter, which is a string (stored as bytes). When the tokenURI function is called, the contract returns a string which is the uriBase concatenated with the tokenId. This means each token's URI doesn't need to be manually defined. It's assumed that the URI base will take the form of "something.com/" with the trailing "/", but it's not required so long as the concatenated form resolves to a file with the tokens metadata.
 
-I also changed the mutability of the `name()` and `symbol()` functions from `pure` to `view`. This technically breaches the mutability guarantee rules, but I think the standard is wrong for having them as `pure`, because it means you have to hard code the values into the contract functions. I put in a pull request and hopefully the standard will be updated to match this.
+Note: The mutability of the `name()` and `symbol()` functions according to the standard are `pure`. I put in a pull request to the standard suggesting they be changed to `view`, but apparently the reason for keeping it at pure means its a gaurantee that they won't change later, meaning they can be cached. So basically in order to be compliant, you have to hard code this information into the functions. And since we're hard coding the name and symbol, seems dumb not to hardcode the `uriBase` as well. 
 
 TokenERC721Enumerable.sol extends TokenERC721.sol aswell, and adheres to basic 721 and also the ERC721Enumerable.sol standard, which allows token lookup via index aswell as token ID.
 
