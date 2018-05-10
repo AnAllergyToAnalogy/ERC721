@@ -23,3 +23,5 @@ This addition is not as scaleable. In order to satisfy the following criteria:
 3. contract creator owns tokens when they are minted
 
 it was necessary to iterate through newly minted tokens to add them to relevant index arrays. This means gas cost increases linearly with the number of tokens. However, it also means that all other operations still have a fixed cost, which was seen as more important. It is an assumption, but presumably newly minted NFTs will have a value >> the cost of minting the token. So in this regard it still scales.
+
+TokenERC721Full.sol is simply a contract that combines both the extensions. There's no extra code, just a constructor that calls the constructors of the two extensions.
