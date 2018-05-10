@@ -169,7 +169,7 @@ contract TokenERC721 is ERC721, CheckERC165{
         );
         require(owner == _from);
         require(_to != 0x0);
-        require(isValidToken(_tokenId));
+        //require(isValidToken(_tokenId));
 
         emit Transfer(_from, _to, _tokenId);
 
