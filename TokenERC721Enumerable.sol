@@ -1,4 +1,4 @@
-pragma solidity ^0.4.21;
+pragma solidity ^0.4.22;
 
 import "./TokenERC721.sol";
 import "./standard/ERC721Enumerable.sol";
@@ -8,12 +8,12 @@ import "./standard/ERC721Enumerable.sol";
 /// @dev Extends TokenERC721
 contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
 
-    mapping(address => uint[]) private ownerTokenIndexes;
-    mapping(uint => uint) private tokenTokenIndexes;
+    mapping(address => uint[]) internal ownerTokenIndexes;
+    mapping(uint => uint) internal tokenTokenIndexes;
 
     /// @notice Contract constructor
     /// @param _initialSupply The number of tokens to mint initially (see TokenERC721)
-    function TokenERC721Enumerable(uint _initialSupply) public TokenERC721(_initialSupply){
+    constructor(uint _initialSupply) public TokenERC721(_initialSupply){
         for(uint i = 0; i < _initialSupply; i++){
             tokenTokenIndexes[i+1] = i;
             ownerTokenIndexes[creator].push(i+1);
@@ -52,7 +52,7 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     /// @return The token identifier for the `_index`th NFT assigned to `_owner`,
     ///   (sort order not specified)
     function tokenOfOwnerByIndex(address _owner, uint256 _index) external view returns (uint256){
-        require(_index < balanceOf[_owner]);
+        require(_index < balances[_owner]);
         return ownerTokenIndexes[_owner][_index];
     }
 
@@ -62,7 +62,7 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
-    function do_transferFrom(address _from, address _to, uint256 _tokenId) internal {
+    function transferFrom(address _from, address _to, uint256 _tokenId) public {
         //Check Transferable
         //There is a token validity check in ownerOf
         address owner = this.ownerOf(_tokenId);
@@ -77,15 +77,16 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
         require(isValidToken(_tokenId));
 
         emit Transfer(_from, _to, _tokenId);
+
         owners[_tokenId] = _to;
-        balanceOf[_from]--;
-        balanceOf[_to]++;
+        balances[_from]--;
+        balances[_to]++;
         //Reset approved if there is one
         if(allowance[_tokenId] != 0x0){
             delete allowance[_tokenId];
         }
 
-        //Enumerable
+        //Enumerable Additions
         uint oldIndex = tokenTokenIndexes[_tokenId];
         if(oldIndex != ownerTokenIndexes[_from].length - 1){
             ownerTokenIndexes[_from][oldIndex] = ownerTokenIndexes[_from][ownerTokenIndexes[_from].length - 1];
@@ -100,11 +101,11 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     /// @dev See TokenERC721 - is largely identical except for some array manipulation.
     /// @param _extraTokens The number of extra tokens to mint.
     function issueTokens(uint256 _extraTokens) public{
-        //Old
+        //Original
         require(msg.sender == creator);
-        balanceOf[msg.sender] = balanceOf[msg.sender].add(_extraTokens);
+        balances[msg.sender] = balances[msg.sender].add(_extraTokens);
 
-        //New
+        //Enumerable Additions
         uint thisId;
         for(uint i = 0; i < _extraTokens; i++){
             thisId = maxId.add(i).add(1);// + i + 1;
@@ -112,7 +113,25 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
             ownerTokenIndexes[creator].push(thisId);
         }
 
-        //Old
+        //Original
         maxId = maxId.add(_extraTokens);
+    }
+
+    function burnToken(uint256 _tokenId) external{
+        address owner = ownerOf(_tokenId);
+        require ( owner == msg.sender             //Require sender owns token
+            //Doing the two below manually instead of referring to the external methods saves gas
+            || allowance[_tokenId] == msg.sender      //or is approved for this token
+            || authorised[owner][msg.sender]          //or is approved for all
+        );
+        burned[_tokenId] = true;
+        balances[owner]--;
+
+        //Enumerable Additions
+        uint oldIndex = tokenTokenIndexes[_tokenId];
+        if(oldIndex != ownerTokenIndexes[owner].length - 1){
+            ownerTokenIndexes[owner][oldIndex] = ownerTokenIndexes[owner][ownerTokenIndexes[owner].length - 1];
+        }
+        ownerTokenIndexes[owner].length--;
     }
 }
