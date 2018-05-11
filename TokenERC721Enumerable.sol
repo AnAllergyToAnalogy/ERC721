@@ -57,8 +57,15 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     }
 
 
-    /// @notice Internal function that actually transfers tokens.
-    /// @dev See TokenERC721 - is largely identical except for some array manipulation at the end.
+    //Modifications to Standard ERC721 Functions
+
+    /// @notice Transfer ownership of an NFT -- THE CALLER IS RESPONSIBLE
+    ///  TO CONFIRM THAT `_to` IS CAPABLE OF RECEIVING NFTS OR ELSE
+    ///  THEY MAY BE PERMANENTLY LOST
+    /// @dev Throws unless `msg.sender` is the current owner, an authorized
+    ///  operator, or the approved address for this NFT. Throws if `_from` is
+    ///  not the current owner. Throws if `_to` is the zero address. Throws if
+    ///  `_tokenId` is not a valid NFT.
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
@@ -74,13 +81,14 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
         );
         require(owner == _from);
         require(_to != 0x0);
-        require(isValidToken(_tokenId));
+        //require(isValidToken(_tokenId)); <-- done by ownerOf
 
         emit Transfer(_from, _to, _tokenId);
 
         owners[_tokenId] = _to;
         balances[_from]--;
         balances[_to]++;
+
         //Reset approved if there is one
         if(allowance[_tokenId] != 0x0){
             delete allowance[_tokenId];
@@ -111,6 +119,9 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
             thisId = maxId.add(i).add(1);// + i + 1;
             tokenTokenIndexes[thisId] = ownerTokenIndexes[creator].length;
             ownerTokenIndexes[creator].push(thisId);
+
+            //Move event emit into this loop to save gas
+            emit Transfer(0x0, creator, thisId);
         }
 
         //Original
@@ -133,5 +144,8 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
             ownerTokenIndexes[owner][oldIndex] = ownerTokenIndexes[owner][ownerTokenIndexes[owner].length - 1];
         }
         ownerTokenIndexes[owner].length--;
+
+        //Have to emit an event when a token is burnt
+        emit Transfer(owner, 0x0, _tokenId);
     }
 }
