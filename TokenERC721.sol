@@ -29,6 +29,11 @@ contract TokenERC721 is ERC721, CheckERC165{
         balances[msg.sender] = _initialSupply;
         maxId = _initialSupply;
 
+        for(uint i = 1; i <= maxId; i++){
+            emit Transfer(0x0, creator, i);
+        }
+
+
         //Add to ERC165 Interface Check
         supportedInterfaces[
             this.balanceOf.selector ^
@@ -87,6 +92,11 @@ contract TokenERC721 is ERC721, CheckERC165{
         require(msg.sender == creator);
         balances[msg.sender] = balances[msg.sender].add(_extraTokens);
         maxId = maxId.add(_extraTokens);
+
+        //We have to emit an event for each token that gets created
+        for(uint i = maxId - _extraTokens + 1; i <= maxId; i++){
+            emit Transfer(0x0, creator, i);
+        }
     }
 
     function burnToken(uint256 _tokenId) external{
@@ -98,8 +108,26 @@ contract TokenERC721 is ERC721, CheckERC165{
         );
         burned[_tokenId] = true;
         balances[owner]--;
+
+        //Have to emit an event when a token is burnt
+        emit Transfer(owner, 0x0, _tokenId);
     }
 
+
+    /// @notice Set or reaffirm the approved address for an NFT
+    /// @dev The zero address indicates there is no approved address.
+    /// @dev Throws unless `msg.sender` is the current NFT owner, or an authorized
+    ///  operator of the current owner.
+    /// @param _approved The new approved NFT controller
+    /// @param _tokenId The NFT to approve
+    function approve(address _approved, uint256 _tokenId)  external{
+        address owner = ownerOf(_tokenId);
+        require( owner == msg.sender                    //Require Sender Owns Token
+            || authorised[owner][msg.sender]                //  or is approved for all.
+        );
+        emit Approval(owner, _approved, _tokenId);
+        allowance[_tokenId] = _approved;
+    }
 
     /// @notice Get the approved address for a single NFT
     /// @dev Throws if `_tokenId` is not a valid NFT
@@ -119,25 +147,10 @@ contract TokenERC721 is ERC721, CheckERC165{
     }
 
 
-    /// @notice Set or reaffirm the approved address for an NFT
-    /// @dev The zero address indicates there is no approved address.
-    /// @dev Throws unless `msg.sender` is the current NFT owner, or an authorized
-    ///  operator of the current owner.
-    /// @param _approved The new approved NFT controller
-    /// @param _tokenId The NFT to approve
-    function approve(address _approved, uint256 _tokenId)  external{
-        address owner = ownerOf(_tokenId);
-        require( owner == msg.sender                    //Require Sender Owns Token
-        || authorised[owner][msg.sender]                //  or is approved for all.
-        );
-        emit Approval(owner, _approved, _tokenId);
-        allowance[_tokenId] = _approved;
 
-    }
 
     /// @notice Enable or disable approval for a third party ("operator") to manage
     ///  all your assets.
-    /// @dev Throws unless `msg.sender` is the current NFT owner.
     /// @dev Emits the ApprovalForAll event
     /// @param _operator Address to add to the set of authorized operators.
     /// @param _approved True if the operators is approved, false to revoke approval
@@ -169,7 +182,7 @@ contract TokenERC721 is ERC721, CheckERC165{
         );
         require(owner == _from);
         require(_to != 0x0);
-        //require(isValidToken(_tokenId));
+        //require(isValidToken(_tokenId)); <-- done by ownerOf
 
         emit Transfer(_from, _to, _tokenId);
 
@@ -195,6 +208,8 @@ contract TokenERC721 is ERC721, CheckERC165{
     /// @param _tokenId The NFT to transfer
     /// @param data Additional data with no specified format, sent in call to `_to`
     function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes data) public {
+        transferFrom(_from, _to, _tokenId);
+
         //Get size of "_to" address, if 0 it's a wallet
         uint32 size;
         assembly {
@@ -204,7 +219,7 @@ contract TokenERC721 is ERC721, CheckERC165{
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
             require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
         }
-        transferFrom(_from, _to, _tokenId);
+
     }
 
     /// @notice Transfers the ownership of an NFT from one address to another address
