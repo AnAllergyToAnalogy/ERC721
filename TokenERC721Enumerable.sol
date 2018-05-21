@@ -11,12 +11,15 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     mapping(address => uint[]) internal ownerTokenIndexes;
     mapping(uint => uint) internal tokenTokenIndexes;
 
+    uint[] internal tokenIndexes;
+
     /// @notice Contract constructor
     /// @param _initialSupply The number of tokens to mint initially (see TokenERC721)
     constructor(uint _initialSupply) public TokenERC721(_initialSupply){
         for(uint i = 0; i < _initialSupply; i++){
             tokenTokenIndexes[i+1] = i;
             ownerTokenIndexes[creator].push(i+1);
+            tokenIndexes.push(i+1);
         }
 
         //Add to ERC165 Interface Check
@@ -32,7 +35,7 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     /// @return A count of valid NFTs tracked by this contract, where each one of
     ///  them has an assigned and queryable owner not equal to the zero address
     function totalSupply() external view returns (uint256){
-        return maxId;
+        return tokenIndexes.length;
     }
 
     /// @notice Enumerate valid NFTs
@@ -41,7 +44,8 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     /// @return The token identifier for the `_index`th NFT,
     ///  (sort order not specified)
     function tokenByIndex(uint256 _index) external view returns(uint256){
-        return _index + 1;
+        require(_index < tokenIndexes.length);
+        return tokenIndexes[_index];
     }
 
     /// @notice Enumerate NFTs assigned to an owner
@@ -96,8 +100,12 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
 
         //Enumerable Additions
         uint oldIndex = tokenTokenIndexes[_tokenId];
+        //If the token isn't the last one in the owner's index
         if(oldIndex != ownerTokenIndexes[_from].length - 1){
+            //Move the old one in the index list
             ownerTokenIndexes[_from][oldIndex] = ownerTokenIndexes[_from][ownerTokenIndexes[_from].length - 1];
+            //Update the token's reference to its place in the index list
+            tokenTokenIndexes[ownerTokenIndexes[_from][oldIndex]] = oldIndex;
         }
         ownerTokenIndexes[_from].length--;
         tokenTokenIndexes[_tokenId] = ownerTokenIndexes[_to].length;
@@ -120,6 +128,8 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
             tokenTokenIndexes[thisId] = ownerTokenIndexes[creator].length;
             ownerTokenIndexes[creator].push(thisId);
 
+            tokenIndexes.push(thisId);
+
             //Move event emit into this loop to save gas
             emit Transfer(0x0, creator, thisId);
         }
@@ -141,9 +151,20 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
         //Enumerable Additions
         uint oldIndex = tokenTokenIndexes[_tokenId];
         if(oldIndex != ownerTokenIndexes[owner].length - 1){
+            //Move last token to old index
             ownerTokenIndexes[owner][oldIndex] = ownerTokenIndexes[owner][ownerTokenIndexes[owner].length - 1];
+            //update token self reference to new pos
+            tokenTokenIndexes[ownerTokenIndexes[owner][oldIndex]] = oldIndex;
         }
         ownerTokenIndexes[owner].length--;
+        delete tokenTokenIndexes[_tokenId];
+
+        oldIndex = tokenIndexes[_tokenId];
+        if(oldIndex != tokenIndexes.length - 1){
+            //Move last token to old index
+            tokenIndexes[oldIndex] = tokenIndexes[tokenIndexes.length - 1];
+        }
+        tokenIndexes.length--;
 
         //Have to emit an event when a token is burnt
         emit Transfer(owner, 0x0, _tokenId);
