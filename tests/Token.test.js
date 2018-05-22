@@ -1,9 +1,3 @@
-//Tests for ERC721 Compliant token,
-//For NodeJS, 
-//usuing ganache-cli, web3 and Mocha for tests
-
-//Requires compiled Token Contract, and compiled Valid and Invalid Receiver contracts.
-
 const assert = require('assert');
 const ganache = require('ganache-cli');
 const Web3 = require('web3');
@@ -19,9 +13,7 @@ const compiledInvalidReceiver = require('../ethereum/build/InvalidReceiver.json'
 
 let accounts;
 let token;
-
 const initialTokens = 10;
-
 beforeEach(async () => {
     accounts = await web3.eth.getAccounts();
 
@@ -30,20 +22,119 @@ beforeEach(async () => {
             data: compiledToken.bytecode,
             arguments: [initialTokens]
         })
-        .send({from: accounts[0], gas:'8000000'});
+         .send({from: accounts[0], gas:'8000000'});
     token.setProvider(provider);
-
 });
 
 describe('Token Contract',() => {
     it('deploys token contract',  async () => {
         assert.ok(token.options.address);
     });
-    it('balance of creator is initial token count', async () => {
+
+    it('Balance of creator = initial token supply', async () => {
         const balance = await token.methods.balanceOf(accounts[0]).call();
         assert(balance == initialTokens);
     });
-    it('can approve someone for your own token', async () => {
+
+    it('Can transferFrom your own coin', async () => {
+        const tokenId = 1;
+        const owner = accounts[0];
+        const receiver = accounts[1];
+
+        try{
+            await token.methods.transferFrom(owner, receiver, tokenId).send({
+                from: owner
+            });
+            assert(true);
+        }catch(err){
+            assert(false);
+        }
+    });
+    it('Can safeTransferFrom your own coin to person', async () => {
+        const tokenId = 1;
+        const owner = accounts[0];
+        const receiver = accounts[1];
+        let gotReceiver;
+        try{
+            await token.methods.safeTransferFrom(owner, receiver, tokenId).send({
+                from: owner
+            });
+            assert(true);
+        }catch(err){
+            assert(false);
+        }
+        gotReceiver = await token.methods.ownerOf(tokenId).call();
+        assert(gotReceiver == receiver);
+
+    });
+    it('Can safeTransferFrom your own coin to valid contract', async () => {
+        const tokenId = 1;
+        const owner = accounts[0];
+        let gotReceiver;
+
+
+        const receiver = await new web3.eth.Contract(JSON.parse(compiledValidReceiver.interface))
+            .deploy({
+                data: compiledValidReceiver.bytecode
+            })
+            .send({from: accounts[0], gas:'1000000'});
+        receiver.setProvider(provider);
+        const receiverAddress = receiver.options.address;
+
+        try{
+            await token.methods.safeTransferFrom(owner, receiverAddress, tokenId).send({
+                from: owner
+            });
+            assert(true);
+        }catch(err){
+            assert(false);
+        }
+        gotReceiver = await token.methods.ownerOf(tokenId).call();
+        assert(gotReceiver == receiverAddress);
+
+    });
+    it('Can\'t safeTransferFrom your own coin to invalid contract', async () => {
+        const tokenId = 1;
+        const owner = accounts[0];
+        const receiver = await new web3.eth.Contract(JSON.parse(compiledInvalidReceiver.interface))
+            .deploy({
+                data: compiledInvalidReceiver.bytecode
+            })
+            .send({from: accounts[0], gas:'1000000'});
+        receiver.setProvider(provider);
+        const receiverAddress = receiver.options.address;
+
+        let success = false;
+        try{
+            await token.methods.safeTransferFrom(owner, receiverAddress, tokenId).send({
+                from: owner
+            });
+            success = true;
+        }catch(err){
+        }
+        assert(!success);
+    });
+    it('Can safeTransferFrom coin with data', async () => {
+        const tokenId = 1;
+        const owner = accounts[0];
+        const receiver = accounts[1];
+        let gotReceiver;
+
+        const bytes = web3.utils.asciiToHex("TEST");
+
+        try{
+            await token.methods.safeTransferFrom(owner, receiver, tokenId, bytes).send({
+                from: owner
+            });
+            assert(true);
+        }catch(err){
+            assert(false);
+        }
+        gotReceiver = await token.methods.ownerOf(tokenId).call();
+        assert(gotReceiver == receiver);
+    });
+
+    it('Can approve someone for your own token', async () => {
         const tokenId = 1;
         try{
             await token.methods.approve(accounts[1],tokenId).send({
@@ -54,18 +145,19 @@ describe('Token Contract',() => {
             assert(false);
         }
     });
-    it('can\'t approve someone for not your token', async () => {
+    it('Can\'t approve someone for not your token', async () => {
         const tokenId = 1;
+        let success = false;
         try{
             await token.methods.approve(accounts[2],tokenId).send({
                 from: accounts[1]
             });
-            assert(false);
+            success = true;
         }catch(err){
-            assert(err);
         }
+        assert(!success);
     });
-    it('person gets approved', async () => {
+    it('Person gets approved', async () => {
         const tokenId = 1;
         let approved;
         await token.methods.approve(accounts[1],tokenId).send({
@@ -74,7 +166,7 @@ describe('Token Contract',() => {
         approved = await token.methods.getApproved(tokenId).call();
         assert(approved == accounts[1]);
     });
-    it('new approved overwrites old one', async () => {
+    it('New approved overwrites old one', async () => {
         const tokenId = 1;
         let approved0, approved1;
         await token.methods.approve(accounts[1],tokenId).send({
@@ -88,7 +180,7 @@ describe('Token Contract',() => {
 
         assert(approved1 == accounts[2]);
     });
-    it('can deprove (set to 0x0)', async () => {
+    it('Can un-approve (set to 0x0)', async () => {
         const tokenId = 1;
         let approved0, approved1;
         await token.methods.approve(accounts[1],tokenId).send({
@@ -102,7 +194,7 @@ describe('Token Contract',() => {
 
         assert(approved1 == 0x0);
     });
-    it('approved can spend coin', async () => {
+    it('Approved can transfer coin', async () => {
         const tokenId = 1;
         const owner = accounts[0];
         const approved = accounts[1];
@@ -121,7 +213,7 @@ describe('Token Contract',() => {
             assert(false);
         }
     });
-    it('after sending, no longer approved', async () => {
+    it('After sending, no longer approved', async () => {
         const tokenId = 1;
         const owner = accounts[0];
         const approved = accounts[1];
@@ -140,7 +232,8 @@ describe('Token Contract',() => {
         gotApproved = await token.methods.getApproved(tokenId).call();
         assert(approved != gotApproved);
     });
-    it('can make someone operator', async () => {
+
+    it('Can make someone operator', async () => {
         const owner = accounts[0];
         const operator = accounts[1];
         let isOperator;
@@ -183,7 +276,7 @@ describe('Token Contract',() => {
         gotReceiver = await token.methods.ownerOf(tokenId).call();
         assert(receiver == gotReceiver);
     });
-    it('after sending token, operator can\'t send again', async () => {
+    it('After sending token, operator can\'t send again', async () => {
         const tokenId = 1;
         const owner = accounts[0];
         const operator = accounts[1];
@@ -195,114 +288,14 @@ describe('Token Contract',() => {
         await token.methods.transferFrom(owner, receiver, tokenId).send({
             from: operator
         });
+        let success = false;
         try{
             await token.methods.transferFrom(receiver, owner, tokenId).send({
                 from: operator
             });
-            assert(false);
+            success = true;
         }catch(err){
-            assert(err);
         }
-    });
-    it('can transferFrom your own coin', async () => {
-        const tokenId = 1;
-        const owner = accounts[0];
-        const operator = accounts[1];
-        const receiver = accounts[2];
-
-        try{
-            await token.methods.transferFrom(owner, receiver, tokenId).send({
-                from: owner
-            });
-            assert(true);
-        }catch(err){
-            assert(false);
-        }
-    });
-    it('can safeTransferFrom your own coin to person', async () => {
-        const tokenId = 1;
-        const owner = accounts[0];
-        const operator = accounts[1];
-        const receiver = accounts[2];
-        let gotReceiver;
-        try{
-            await token.methods.safeTransferFrom(owner, receiver, tokenId).send({
-                from: owner
-            });
-            assert(true);
-        }catch(err){
-            assert(false);
-        }
-        gotReceiver = await token.methods.ownerOf(tokenId).call();
-        assert(gotReceiver == receiver);
-
-    });
-    it('can safeTransferFrom your own coin to valid contract', async () => {
-        const tokenId = 1;
-        const owner = accounts[0];
-        let gotReceiver;
-
-
-        const receiver = await new web3.eth.Contract(JSON.parse(compiledValidReceiver.interface))
-            .deploy({
-                data: compiledValidReceiver.bytecode
-            })
-            .send({from: accounts[0], gas:'1000000'});
-        receiver.setProvider(provider);
-        const receiverAddress = receiver.options.address;
-
-        try{
-            await token.methods.safeTransferFrom(owner, receiverAddress, tokenId).send({
-                from: owner
-            });
-            assert(true);
-        }catch(err){
-            assert(false);
-        }
-        gotReceiver = await token.methods.ownerOf(tokenId).call();
-        assert(gotReceiver == receiverAddress);
-
-    });
-    it('can\'t safeTransferFrom your own coin to invalid contract', async () => {
-        const tokenId = 1;
-        const owner = accounts[0];
-
-        const receiver = await new web3.eth.Contract(JSON.parse(compiledInvalidReceiver.interface))
-            .deploy({
-                data: compiledInvalidReceiver.bytecode
-            })
-            .send({from: accounts[0], gas:'1000000'});
-        receiver.setProvider(provider);
-        const receiverAddress = receiver.options.address;
-
-        try{
-            await token.methods.safeTransferFrom(owner, receiverAddress, tokenId).send({
-                from: owner
-            });
-            assert(false);
-        }catch(err){
-            assert(err);
-        }
-    });
-    it('can safeTransferFrom coin with data', async () => {
-        const tokenId = 1;
-        const owner = accounts[0];
-        const operator = accounts[1];
-        const receiver = accounts[2];
-        let gotReceiver;
-
-        const bytes = web3.utils.asciiToHex("TEST");
-
-        try{
-            await token.methods.safeTransferFrom(owner, receiver, tokenId, bytes).send({
-                from: owner
-            });
-            assert(true);
-        }catch(err){
-            assert(false);
-        }
-        gotReceiver = await token.methods.ownerOf(tokenId).call();
-        assert(gotReceiver == receiver);
-
+        assert(!success);
     });
 });
