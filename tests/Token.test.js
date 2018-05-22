@@ -36,6 +36,25 @@ describe('Token Contract',() => {
         assert(balance == initialTokens);
     });
 
+    it('Creator can issue tokens', async () => {
+        const toIssue = 2;
+        const owner = accounts[0];
+        await token.methods.issueTokens(toIssue).send({
+            from: owner
+        });
+        const finalBalance = await token.methods.balanceOf(accounts[0]).call();
+        assert((initialTokens + toIssue) == finalBalance);
+    });
+    it('Can burn token', async () => {
+        const owner = accounts[0];
+        await token.methods.burnToken('1').send({
+            from: owner
+        });
+        const finalBalance = await token.methods.balanceOf(accounts[0]).call();
+        assert((initialTokens - 1) == finalBalance);
+    });
+
+
     it('Can transferFrom your own coin', async () => {
         const tokenId = 1;
         const owner = accounts[0];
