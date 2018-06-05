@@ -29,11 +29,6 @@ contract TokenERC721 is ERC721, CheckERC165{
         balances[msg.sender] = _initialSupply;
         maxId = _initialSupply;
 
-        for(uint i = 1; i <= maxId; i++){
-            emit Transfer(0x0, creator, i);
-        }
-
-
         //Add to ERC165 Interface Check
         supportedInterfaces[
             this.balanceOf.selector ^
