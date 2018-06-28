@@ -76,7 +76,7 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
     function transferFrom(address _from, address _to, uint256 _tokenId) public {
         //Check Transferable
         //There is a token validity check in ownerOf
-        address owner = this.ownerOf(_tokenId);
+        address owner = ownerOf(_tokenId);
 
         require ( owner == msg.sender             //Require sender owns token
             //Doing the two below manually instead of referring to the external methods saves gas
