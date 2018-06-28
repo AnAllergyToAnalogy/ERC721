@@ -197,7 +197,7 @@ contract TokenERC721 is ERC721, CheckERC165{
     ///  `_tokenId` is not a valid NFT. When transfer is complete, this function
     ///  checks if `_to` is a smart contract (code size > 0). If so, it calls
     ///  `onERC721Received` on `_to` and throws if the return value is not
-    ///  `bytes4(keccak256("onERC721Received(address,uint256,bytes)"))`.
+    ///  `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`
     /// @param _from The current owner of the NFT
     /// @param _to The new owner
     /// @param _tokenId The NFT to transfer
@@ -212,7 +212,7 @@ contract TokenERC721 is ERC721, CheckERC165{
         }
         if(size > 0){
             ERC721TokenReceiver receiver = ERC721TokenReceiver(_to);
-            require(receiver.onERC721Received(_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,uint256,bytes)")));
+            require(receiver.onERC721Received(msg.sender,_from,_tokenId,data) == bytes4(keccak256("onERC721Received(address,address,uint256,bytes)")));
         }
 
     }
