@@ -86,12 +86,13 @@ contract TokenERC721 is ERC721, CheckERC165{
     function issueTokens(uint256 _extraTokens) public{
         require(msg.sender == creator);
         balances[msg.sender] = balances[msg.sender].add(_extraTokens);
-        maxId = maxId.add(_extraTokens);
 
         //We have to emit an event for each token that gets created
-        for(uint i = maxId - _extraTokens + 1; i <= maxId; i++){
+        for(uint i = maxId.add(1); i <= maxId.add(_extraTokens); i++){
             emit Transfer(0x0, creator, i);
         }
+
+        maxId += _extraTokens; //<- SafeMath for this operation was done in for loop above
     }
 
     function burnToken(uint256 _tokenId) external{
