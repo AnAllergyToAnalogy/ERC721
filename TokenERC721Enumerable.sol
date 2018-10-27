@@ -10,8 +10,8 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
 
     mapping(address => uint[]) internal ownerTokenIndexes;
     mapping(uint => uint) internal tokenTokenIndexes;
-
     uint[] internal tokenIndexes;
+    mapping(uint => uint) internal indexTokens;
 
     /// @notice Contract constructor
     /// @param _initialSupply The number of tokens to mint initially (see TokenERC721)
@@ -20,6 +20,7 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
             tokenTokenIndexes[i+1] = i;
             ownerTokenIndexes[creator].push(i+1);
             tokenIndexes.push(i+1);
+            indexTokens[i + 1] = i;
         }
 
         //Add to ERC165 Interface Check
@@ -85,7 +86,6 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
         );
         require(owner == _from);
         require(_to != 0x0);
-        //require(isValidToken(_tokenId)); <-- done by ownerOf
 
         emit Transfer(_from, _to, _tokenId);
 
@@ -128,7 +128,9 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
             tokenTokenIndexes[thisId] = ownerTokenIndexes[creator].length;
             ownerTokenIndexes[creator].push(thisId);
 
+            indexTokens[thisId] = tokenIndexes.length;
             tokenIndexes.push(thisId);
+
 
             //Move event emit into this loop to save gas
             emit Transfer(0x0, creator, thisId);
@@ -159,12 +161,15 @@ contract TokenERC721Enumerable is TokenERC721, ERC721Enumerable {
         ownerTokenIndexes[owner].length--;
         delete tokenTokenIndexes[_tokenId];
 
-        oldIndex = tokenIndexes[_tokenId];
+
+        oldIndex = indexTokens[_tokenId];
         if(oldIndex != tokenIndexes.length - 1){
             //Move last token to old index
             tokenIndexes[oldIndex] = tokenIndexes[tokenIndexes.length - 1];
+            indexTokens[ tokenIndexes[oldIndex] ] = oldIndex;
         }
         tokenIndexes.length--;
+        delete indexTokens[_tokenId];
 
         //Have to emit an event when a token is burnt
         emit Transfer(owner, 0x0, _tokenId);
