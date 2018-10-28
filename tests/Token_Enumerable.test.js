@@ -27,7 +27,7 @@ beforeEach(async () => {
 });
 
 
-describe('Token Contract',() => {
+describe('Token Enumerable Contract',() => {
     it("Reported total supply is accurate for initial supply", async() => {
         const totalSupply_reported = await token.methods.totalSupply().call();
         assert(totalSupply_reported == initialTokens);
