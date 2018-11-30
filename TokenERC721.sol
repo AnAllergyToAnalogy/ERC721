@@ -35,8 +35,8 @@ contract TokenERC721 is ERC721, CheckERC165{
             this.ownerOf.selector ^
             //this.safeTransferFrom.selector ^
             //Have to manually do the two transferFroms because overloading confuse selector
-            bytes4(keccak256("safeTransferFrom(address,address,uint256"))^
-            bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes"))^
+            bytes4(keccak256("safeTransferFrom(address,address,uint256)"))^
+            bytes4(keccak256("safeTransferFrom(address,address,uint256,bytes)"))^
             this.transferFrom.selector ^
             this.approve.selector ^
             this.setApprovalForAll.selector ^
